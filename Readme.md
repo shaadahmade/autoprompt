@@ -48,7 +48,7 @@ Each node streams results to the browser via SSE as it completes. You watch expe
 ```bash
 git clone https://github.com/yourname/autoprompt
 cd autoprompt
-pip install -r requirements.txt
+pip install -r Requirement.txt
 ```
 
 **2. Run**
