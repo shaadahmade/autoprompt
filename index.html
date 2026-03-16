@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoPrompt</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Cabinet+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0d0f;
+  --surface: #16161a;
+  --surface2: #1e1e24;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.1);
+  --accent: #00e5a0;
+  --accent-dim: rgba(0,229,160,0.1);
+  --accent-glow: rgba(0,229,160,0.2);
+  --text: #e2e2ea;
+  --text2: #7e7e96;
+  --text3: #42424e;
+  --red: #ff4d6a;
+  --amber: #ffb347;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Cabinet Grotesk', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+/* subtle grid */
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: linear-gradient(rgba(0,229,160,0.025) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(0,229,160,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.wrap { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 0 24px 80px; }
+
+/* ── Header ── */
+header { padding: 32px 0 40px; display: flex; align-items: center; gap: 14px; }
+.logo-mark {
+  width: 40px; height: 40px; background: var(--accent); border-radius: 10px;
+  display: grid; place-items: center; font-size: 20px; flex-shrink: 0;
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+.logo-text h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+.logo-text h1 span { color: var(--accent); }
+.logo-text p { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.08em; margin-top: 2px; }
+
+/* ── Layout ── */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media(max-width:680px){ .grid { grid-template-columns: 1fr; } }
+
+/* ── Panel ── */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.panel-head {
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+  font-family: var(--mono); font-size: 10px; color: var(--text2);
+  text-transform: uppercase; letter-spacing: 0.1em;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.panel-body { padding: 16px; }
+
+/* ── Form elements ── */
+label { display: block; font-family: var(--mono); font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+textarea, input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border2);
+  border-radius: 8px; color: var(--text); font-family: var(--mono); font-size: 12px;
+  padding: 10px 12px; outline: none; transition: border-color .15s, box-shadow .15s;
+}
+textarea { min-height: 90px; resize: vertical; line-height: 1.6; }
+textarea:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+.field { margin-bottom: 14px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* eval rows */
+.eval-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px; align-items: start; }
+.eval-row textarea { min-height: 54px; font-size: 11px; }
+.btn-rm {
+  width: 28px; height: 28px; background: none; border: 1px solid var(--border2);
+  color: var(--text3); border-radius: 6px; cursor: pointer; font-size: 15px;
+  display: grid; place-items: center; transition: all .15s; flex-shrink: 0; margin-top: 2px;
+}
+.btn-rm:hover { border-color: var(--red); color: var(--red); }
+.btn-add {
+  width: 100%; background: none; border: 1px dashed var(--border2);
+  color: var(--text3); border-radius: 8px; padding: 7px; cursor: pointer;
+  font-family: var(--mono); font-size: 11px; transition: all .15s; margin-top: 4px;
+}
+.btn-add:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+/* run button */
+.btn-run {
+  width: 100%; padding: 13px; background: var(--accent); color: #0d0d0f;
+  border: none; border-radius: 10px; font-family: var(--sans); font-size: 15px;
+  font-weight: 700; cursor: pointer; transition: all .2s; margin-top: 6px;
+}
+.btn-run:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px var(--accent-glow); }
+.btn-run:disabled { opacity: .4; cursor: not-allowed; }
+
+/* stats */
+.stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
+.stat { background: var(--surface2); padding: 12px 14px; }
+.stat-label { font-family: var(--mono); font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+.stat-val { font-size: 22px; font-weight: 700; color: var(--text); transition: color .3s; }
+.stat-val.g { color: var(--accent); }
+.stat-val.w { color: var(--amber); }
+
+/* progress */
+.prog-bar { height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 16px; }
+.prog-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .5s; box-shadow: 0 0 6px var(--accent); }
+
+/* best prompt */
+.best-box {
+  background: var(--bg); border: 1px solid rgba(0,229,160,0.2);
+  border-radius: 8px; padding: 12px; font-family: var(--mono); font-size: 11px;
+  line-height: 1.7; color: var(--text); white-space: pre-wrap;
+  position: relative; min-height: 52px; margin-bottom: 16px;
+}
+.best-box::before {
+  content: 'BEST PROMPT'; position: absolute; top: -8px; left: 10px;
+  background: var(--surface); padding: 0 5px;
+  font-size: 9px; letter-spacing: 0.1em; color: var(--accent);
+}
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text2); border-radius: 5px; padding: 3px 8px;
+  font-family: var(--mono); font-size: 9px; cursor: pointer; transition: all .15s;
+}
+.copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* experiment log */
+.exp-log { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; }
+.exp-log::-webkit-scrollbar { width: 3px; }
+.exp-log::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.exp {
+  display: grid; grid-template-columns: 28px 1fr auto auto;
+  gap: 10px; align-items: start;
+  padding: 10px 12px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 8px;
+  animation: pop .25s ease;
+}
+@keyframes pop { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+.exp.kept   { border-color: rgba(0,229,160,0.2); }
+.exp.discarded { opacity: .5; }
+.exp.active { border-color: var(--amber); animation: pop .25s ease, pulse-border 1.2s infinite; }
+@keyframes pulse-border { 0%,100%{border-color:rgba(255,179,71,.3)} 50%{border-color:var(--amber)} }
+
+.exp-num { font-family: var(--mono); font-size: 10px; color: var(--text3); padding-top: 1px; }
+.exp-info {}
+.exp-mut { font-family: var(--mono); font-size: 11px; color: var(--text2); font-style: italic; margin-bottom: 3px; }
+.exp-prompt { font-family: var(--mono); font-size: 10px; color: var(--text3); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.exp-score { font-family: var(--mono); font-size: 16px; font-weight: 500; text-align: right; padding-top: 1px; }
+.exp-score.g { color: var(--accent); }
+.exp-score.w { color: var(--amber); }
+.exp-score.r { color: var(--red); }
+.exp-score.p { color: var(--text3); font-size: 11px; animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.badge {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.06em;
+  text-transform: uppercase; padding: 2px 6px; border-radius: 4px; margin-top: 2px;
+}
+.badge.kept     { background: var(--accent-dim); color: var(--accent); }
+.badge.discarded{ background: rgba(255,77,106,.08); color: var(--red); }
+.badge.baseline { background: rgba(255,179,71,.1); color: var(--amber); }
+.badge.running  { background: rgba(255,179,71,.1); color: var(--amber); animation: blink 1s infinite; }
+
+.empty { text-align: center; padding: 40px 20px; color: var(--text3); font-family: var(--mono); font-size: 12px; }
+
+/* reflection box */
+.reflect-box {
+  background: var(--bg); border: 1px solid var(--border2); border-radius: 8px;
+  padding: 10px 12px; font-family: var(--mono); font-size: 11px; color: var(--text2);
+  line-height: 1.7; min-height: 36px; margin-bottom: 16px; display: none;
+  font-style: italic;
+}
+.reflect-box.show { display: block; }
+.reflect-label { font-family: var(--mono); font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+
+/* node indicator */
+.node-indicator {
+  display: flex; gap: 6px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;
+}
+.node-pill {
+  font-family: var(--mono); font-size: 9px; padding: 3px 8px;
+  border-radius: 20px; border: 1px solid var(--border); color: var(--text3);
+  transition: all .3s;
+}
+.node-pill.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.node-pill.done   { border-color: var(--border2); color: var(--text2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo-mark">⚡</div>
+    <div class="logo-text">
+      <h1>Auto<span>Prompt</span></h1>
+      <p>LangGraph · Claude · FastAPI</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: config -->
+    <div>
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-head">Configuration</div>
+        <div class="panel-body">
+          <div class="field">
+            <label>Anthropic API key</label>
+            <input type="password" id="apiKey" placeholder="sk-ant-...">
+          </div>
+          <div class="field">
+            <label>Base prompt (will be optimized)</label>
+            <textarea id="basePrompt" rows="4">You are a helpful customer support assistant. Answer questions clearly and helpfully.</textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-head">
+          <span>Eval cases</span>
+          <span style="color:var(--text3);font-size:9px">user message + expected output</span>
+        </div>
+        <div class="panel-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:4px">
+            <span style="font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">User message</span>
+            <span style="font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Expected</span>
+            <span></span>
+          </div>
+          <div id="evalList"></div>
+          <button class="btn-add" onclick="addEval()">+ Add eval case</button>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-head">Settings</div>
+        <div class="panel-body">
+          <div class="row2">
+            <div class="field">
+              <label>Mutations</label>
+              <input type="number" id="numMutations" value="5" min="1" max="20">
+            </div>
+            <div class="field">
+              <label>Model</label>
+              <input type="text" value="claude-sonnet-4-6" readonly style="color:var(--text3)">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-run" id="btnRun" onclick="startRun()">▶ Run AutoPrompt</button>
+    </div>
+
+    <!-- RIGHT: live results -->
+    <div>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Runs</div><div class="stat-val" id="sRuns">0</div></div>
+        <div class="stat"><div class="stat-label">Best</div><div class="stat-val" id="sBest">—</div></div>
+        <div class="stat"><div class="stat-label">Δ Baseline</div><div class="stat-val" id="sDelta">—</div></div>
+        <div class="stat"><div class="stat-label">Kept</div><div class="stat-val" id="sKept">0</div></div>
+      </div>
+
+      <div class="prog-bar"><div class="prog-fill" id="prog" style="width:0%"></div></div>
+
+      <div class="node-indicator" id="nodeIndicator">
+        <span class="node-pill" id="pill-baseline">baseline</span>
+        <span style="color:var(--text3);font-size:10px">→</span>
+        <span class="node-pill" id="pill-reflect">reflect</span>
+        <span style="color:var(--text3);font-size:10px">→</span>
+        <span class="node-pill" id="pill-mutate">mutate</span>
+        <span style="color:var(--text3);font-size:10px">→</span>
+        <span class="node-pill" id="pill-score">score</span>
+        <span style="color:var(--text3);font-size:10px">→</span>
+        <span class="node-pill" id="pill-judge">judge</span>
+      </div>
+
+      <div style="position:relative;margin-bottom:16px">
+        <div class="best-box" id="bestBox">Run AutoPrompt to begin optimizing...</div>
+        <button class="copy-btn" onclick="copyBest()">copy</button>
+      </div>
+
+      <div class="reflect-label" id="reflectLabel" style="display:none">Agent reflection</div>
+      <div class="reflect-box" id="reflectBox"></div>
+
+      <div class="exp-log" id="expLog">
+        <div class="empty">No experiments yet.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let baseline = null, best = null, kept = 0, total = 0;
+
+// default evals
+const defaults = [
+  ["My order hasn't arrived after 2 weeks.", "apologize, check order status, offer refund or reship"],
+  ["How do I reset my password?", "step-by-step instructions, mention verification email"],
+  ["I want to cancel my subscription.", "acknowledge, explain process, offer alternatives"],
+];
+defaults.forEach(([m,e]) => addEval(m,e));
+
+function addEval(msg='', exp='') {
+  const list = document.getElementById('evalList');
+  const row = document.createElement('div');
+  row.className = 'eval-row';
+  row.innerHTML = `<textarea placeholder="User message...">${msg}</textarea><textarea placeholder="Expected...">${exp}</textarea><button class="btn-rm" onclick="this.closest('.eval-row').remove()">×</button>`;
+  list.appendChild(row);
+}
+
+function getEvals() {
+  return [...document.querySelectorAll('.eval-row')].map(r => {
+    const t = r.querySelectorAll('textarea');
+    return { user_message: t[0].value.trim(), expected: t[1].value.trim() };
+  }).filter(e => e.user_message);
+}
+
+function setNode(name) {
+  document.querySelectorAll('.node-pill').forEach(p => p.className = 'node-pill');
+  const el = document.getElementById('pill-' + name);
+  if (el) el.className = 'node-pill active';
+}
+
+function updateStats() {
+  document.getElementById('sRuns').textContent = total;
+  document.getElementById('sKept').textContent = kept;
+  if (best !== null) {
+    const el = document.getElementById('sBest');
+    el.textContent = (best*100).toFixed(0) + '%';
+    el.className = 'stat-val ' + (best >= 0.7 ? 'g' : best >= 0.4 ? 'w' : '');
+  }
+  if (baseline !== null && best !== null) {
+    const d = ((best - baseline)*100).toFixed(0);
+    const el = document.getElementById('sDelta');
+    el.textContent = (d >= 0 ? '+' : '') + d + '%';
+    el.className = 'stat-val ' + (d > 0 ? 'g' : '');
+  }
+}
+
+function scoreClass(s) {
+  return s >= 0.7 ? 'g' : s >= 0.4 ? 'w' : 'r';
+}
+
+function addExpItem(id, mutation, prompt, score, status) {
+  const log = document.getElementById('expLog');
+  const empty = log.querySelector('.empty');
+  if (empty) empty.remove();
+
+  const el = document.createElement('div');
+  el.id = 'exp-' + id;
+  el.className = 'exp ' + (status === 'running' ? 'active' : status);
+  const scoreFmt = score !== null ? (score*100).toFixed(0)+'%' : '...';
+  const scoreC   = score !== null ? scoreClass(score) : 'p';
+  el.innerHTML = `
+    <div class="exp-num">#${String(id).padStart(2,'0')}</div>
+    <div class="exp-info">
+      <div class="exp-mut">${mutation}</div>
+      <div class="exp-prompt">${prompt.slice(0,100)}${prompt.length>100?'...':''}</div>
+    </div>
+    <div class="exp-score ${scoreC}" id="sc-${id}">${scoreFmt}</div>
+    <div class="badge ${status}" id="bd-${id}">${status}</div>`;
+  log.prepend(el);
+}
+
+function updateExpItem(id, score, status) {
+  const el = document.getElementById('exp-' + id);
+  if (!el) return;
+  el.className = 'exp ' + status;
+  document.getElementById('sc-' + id).textContent = (score*100).toFixed(0) + '%';
+  document.getElementById('sc-' + id).className = 'exp-score ' + scoreClass(score);
+  document.getElementById('bd-' + id).textContent = status;
+  document.getElementById('bd-' + id).className = 'badge ' + status;
+}
+
+function copyBest() {
+  navigator.clipboard.writeText(document.getElementById('bestBox').textContent);
+  const b = document.querySelector('.copy-btn');
+  b.textContent = 'copied!';
+  setTimeout(() => b.textContent = 'copy', 1500);
+}
+
+async function startRun() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) { alert('API key required'); return; }
+  const evals = getEvals();
+  if (!evals.length) { alert('Add at least one eval case'); return; }
+
+  // reset
+  baseline = best = null; kept = total = 0;
+  document.getElementById('expLog').innerHTML = '<div class="empty">Starting...</div>';
+  document.getElementById('bestBox').textContent = 'Optimizing...';
+  document.getElementById('reflectBox').textContent = '';
+  document.getElementById('reflectBox').className = 'reflect-box';
+  document.getElementById('reflectLabel').style.display = 'none';
+  document.getElementById('prog').style.width = '0%';
+  document.getElementById('btnRun').disabled = true;
+  updateStats();
+
+  const body = {
+    api_key: apiKey,
+    base_prompt: document.getElementById('basePrompt').value.trim(),
+    eval_cases: evals,
+    num_mutations: parseInt(document.getElementById('numMutations').value) || 5,
+  };
+
+  const resp = await fetch('/run/stream', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body),
+  });
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+
+  while (true) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, {stream: true});
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const ev = JSON.parse(line.slice(6));
+      handleEvent(ev, body.num_mutations);
+    }
+  }
+
+  document.getElementById('btnRun').disabled = false;
+  document.querySelectorAll('.node-pill').forEach(p => { p.className = 'node-pill done'; });
+}
+
+function handleEvent(ev, numMutations) {
+  if (ev.type === 'done') return;
+  if (ev.type === 'error') { console.error(ev.message); return; }
+
+  const { node, data } = ev;
+  setNode(node);
+
+  if (node === 'baseline' && data.experiments?.length) {
+    const exp = data.experiments[0];
+    baseline = best = exp.score;
+    total = 1;
+    addExpItem(0, exp.mutation, exp.prompt, exp.score, 'baseline');
+    document.getElementById('bestBox').textContent = exp.prompt;
+    updateStats();
+  }
+
+  if (node === 'reflect' && data.reflection) {
+    document.getElementById('reflectBox').textContent = data.reflection;
+    document.getElementById('reflectBox').className = 'reflect-box show';
+    document.getElementById('reflectLabel').style.display = 'block';
+  }
+
+  if (node === 'mutate' && data.candidate_mutation) {
+    // show pending experiment
+    const i = data.iteration ?? (total);
+    addExpItem(i, data.candidate_mutation, data.candidate_prompt || '', null, 'running');
+  }
+
+  if (node === 'judge' && data.experiments?.length) {
+    const exp = data.experiments[0];
+    total++;
+    if (exp.status === 'kept') { kept++; best = exp.score; }
+    updateExpItem(exp.id, exp.score, exp.status);
+    if (data.best_prompt) document.getElementById('bestBox').textContent = data.best_prompt;
+    const pct = Math.min(100, Math.round((total / numMutations) * 100));
+    document.getElementById('prog').style.width = pct + '%';
+    updateStats();
+  }
+}
+</script>
+</body>
+</html>
