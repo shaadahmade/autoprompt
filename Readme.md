@@ -46,7 +46,7 @@ Each node streams results to the browser via SSE as it completes. You watch expe
 **1. Clone and install**
 
 ```bash
-git clone https://github.com/yourname/autoprompt
+git clone https://github.com/shaadahmade/autoprompt
 cd autoprompt
 pip install -r Requirement.txt
 ```
@@ -54,7 +54,7 @@ pip install -r Requirement.txt
 **2. Run**
 
 ```bash
-uvicorn main:app --reload
+python -m uvicorn main:app --reload
 ```
 
 **3. Open** `http://localhost:8000`
@@ -69,8 +69,8 @@ Enter your Anthropic API key in the UI — no `.env` file needed.
 autoprompt/
 ├── main.py          # FastAPI backend + LangGraph graph
 ├── index.html       # UI (served by FastAPI at /)
-├── requirements.txt
-└── README.md
+├── Requirement.txt
+└── Readme.md
 ```
 
 `main.py` is the whole backend — ~200 lines. No separate files for graph, nodes, or config.
@@ -186,9 +186,3 @@ Python 3.10+ required (uses `TypedDict` with `list[...]` syntax).
 - **History persistence** — save runs to SQLite, compare across sessions
 - **Export** — download results as TSV or copy best prompt with one click
 - **Multi-model** — use a cheaper model for scoring, smarter model for mutation
-
----
-
-## License
-
-MIT
